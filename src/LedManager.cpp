@@ -1,0 +1,93 @@
+#include "LedManager.h"
+
+LedManager::LedManager(int ledCountParam, int brightnessParam, int pin)
+{
+    ledCount = ledCountParam;
+    brightness = brightnessParam;
+
+    foregroundColor.red = 255;
+    foregroundColor.green = 255;
+    foregroundColor.blue = 0;
+
+    rgbWS = new Adafruit_NeoPixel(ledCount, pin, NEO_GRB + NEO_KHZ800);
+
+    rgbWS->begin();
+    rgbWS->setBrightness(brightness);
+}
+
+int LedManager::colorValue(float percentage)
+{
+    auto value = (int)(percentage * 255) + 1;
+    if (value > 255)
+        value = 255;
+    return value;
+}
+
+void LedManager::displaySingleColor(float redPercentage, float greenPercentage, float bluePercentage)
+{    
+    for (auto i = 0; i < ledCount; i++)
+        rgbWS->setPixelColor(i, foregroundColor.red, foregroundColor.green, foregroundColor.blue);
+    rgbWS->setBrightness(max((int)(brightness * (redPercentage + greenPercentage + bluePercentage) / 3.0), 8));
+    rgbWS->show();
+}
+
+void LedManager::displayGrowFromCenter(float redPercentage, float greenPercentage, float bluePercentage)
+{
+    /*int numActiveLeds = int(NUM_LEDS * (redPercentage + greenPercentage + bluePercentage) / 3.0);
+    numActiveLeds *= LED_SCALING;
+    if (numActiveLeds > NUM_LEDS)
+        numActiveLeds = NUM_LEDS;
+
+    if (numActiveLeds == 0)
+        return;
+
+    auto numAlteredLeds = numActiveLeds / 3;
+
+    auto initialColor = CRGB(colorValue(redPercentage), colorValue(greenPercentage), colorValue(bluePercentage));
+    auto noneColor = CRGB(0, 0, 0);
+
+    auto redIncrement = (1.0 - redPercentage) / numAlteredLeds;
+    auto greenIncrement = (1.0 - greenPercentage) / numAlteredLeds;
+    auto blueIncrement = (1.0 - bluePercentage) / numAlteredLeds;
+
+    auto currentRedPercentage = redPercentage;
+    auto currentGreenPercentage = greenPercentage;
+    auto currentBluePercentage = bluePercentage;
+
+
+    for(int i = 0; i < numActiveLeds/2; i++)
+    {
+        if(i < (numActiveLeds - numAlteredLeds)/2)
+        {
+        leds[NUM_LEDS/2 + i] = initialColor;
+        leds[NUM_LEDS/2 - i - 1]= initialColor;
+        continue;
+        }
+
+        auto currentColor = CRGB(colorValue(currentRedPercentage), colorValue(currentGreenPercentage), colorValue(currentBluePercentage));
+
+        leds[NUM_LEDS/2 + i] = currentColor;
+        leds[NUM_LEDS/2 - i - 1]= currentColor;
+
+        currentRedPercentage += redIncrement;
+        currentGreenPercentage += greenIncrement;
+        currentBluePercentage += blueIncrement;
+
+    }
+
+    for(int i = numActiveLeds/2; i < NUM_LEDS/2; i++)
+    {
+        leds[NUM_LEDS/2 + i] = noneColor;
+        leds[NUM_LEDS/2 - i - 1]= noneColor;
+    }
+
+    FastLED.show(arguments.brightness);*/
+}
+
+void LedManager::displayLeds(float redPercentage, float greenPercentage, float bluePercentage)
+{
+    //if(arguments.mode == MODE_SINGLE_COLOR)
+        displaySingleColor(redPercentage, greenPercentage, bluePercentage);
+    /*if(arguments.mode == MODE_GROW_FROM_CENTER)
+        displayGrowFromCenter(redPercentage, greenPercentage, bluePercentage, arguments);*/
+}
