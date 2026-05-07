@@ -16,6 +16,10 @@ class LedManager
 public:
     LedManager(int ledCountParam, int brightnessParam, int pin);
     void displayLeds(float redPercentage, float greenPercentage, float bluePercentage);
+    // Paint every pixel with (r, g, b) scaled by `intensity` in [0, 1]. Used
+    // for the beat-driven flash on the center dot — soundLoop holds intensity
+    // at 1.0 on a beat, then decays it each frame.
+    void displayFlash(float intensity, int r, int g, int b);
 private:
 
     int colorValue(float percentage);

@@ -92,6 +92,21 @@ void LedManager::displayGrowFromCenter(float redPercentage, float greenPercentag
     FastLED.show(arguments.brightness);*/
 }
 
+void LedManager::displayFlash(float intensity, int r, int g, int b)
+{
+    if (intensity < 0.0f) intensity = 0.0f;
+    if (intensity > 1.0f) intensity = 1.0f;
+
+    int sr = (int)(r * intensity);
+    int sg = (int)(g * intensity);
+    int sb = (int)(b * intensity);
+
+    for (auto i = 0; i < ledCount; i++)
+        rgbWS->setPixelColor(i, sr, sg, sb);
+    rgbWS->show();
+    rgbWS->show();
+}
+
 void LedManager::displayLeds(float redPercentage, float greenPercentage, float bluePercentage)
 {
     //if(arguments.mode == MODE_SINGLE_COLOR)

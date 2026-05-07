@@ -156,6 +156,19 @@ void FFT::calculatePercentages(float & redPercentage, float & greenPercentage, f
     rawGreen = min(rawGreen * gain, 1.0f);
     rawBlue = min(rawBlue * gain, 1.0f);
 
+    // Beat detection on post-AGC bass, before the envelope smooths it. A kick
+    // shows up as a sudden spike above the slow running average; the refractory
+    // counter prevents the same kick from triggering twice while it decays.
+    beatThisFrame = false;
+    if (beatRefractoryLeft > 0)
+        beatRefractoryLeft--;
+    else if (rawBlue > BEAT_MIN_LEVEL && rawBlue > bassRunningAvg * BEAT_THRESHOLD)
+    {
+        beatThisFrame = true;
+        beatRefractoryLeft = BEAT_REFRACTORY_FRAMES;
+    }
+    bassRunningAvg = bassRunningAvg * BEAT_AVG_DECAY + rawBlue * (1.0f - BEAT_AVG_DECAY);
+
     // Envelope follower per band: peak attack, exponential decay. Keeps transients
     // visible and stops the ring from twitching back to dark between drum hits.
     smoothedRed = max(rawRed, smoothedRed * ENVELOPE_DECAY);

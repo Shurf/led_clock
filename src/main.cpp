@@ -30,6 +30,14 @@
 #define NEOPIXEL_BRIGHTNESS 128
 #define SOUND_BRIGHTNESS 128
 
+// Center-dot beat flash: color and per-frame decay. On a detected beat the
+// flash intensity snaps to 1.0; without one it multiplies by FLASH_DECAY each
+// frame. Lower decay = sharper blink, higher = longer afterglow.
+#define FLASH_R 255
+#define FLASH_G 255
+#define FLASH_B 255
+#define FLASH_DECAY 0.5f
+
 #define NEOPIXEL_LED_RIGHT_COLUMN 32
 #define NEOPIXEL_LED_LEFT_COLUMN 22
 #define NEOPIXEL_LED_BOTTOM 23
@@ -82,24 +90,29 @@ void otaLoop(void *context)
 
 void soundLoop(void *context)
 {
+    float flashIntensity = 0.0f;
     while(true)
     {
         float redPercentage;
         float greenPercentage;
         float bluePercentage;
 
-        fft->calculatePercentages(redPercentage, greenPercentage, bluePercentage);   
+        fft->calculatePercentages(redPercentage, greenPercentage, bluePercentage);
+
+        if (fft->beatDetected())
+            flashIntensity = 1.0f;
+        else
+            flashIntensity *= FLASH_DECAY;
+
         lock.lock();
         middleCircle->displayLeds(redPercentage, greenPercentage, bluePercentage);
-        centerDot->displayLeds(redPercentage, greenPercentage, bluePercentage);
-        //middleCircle->displayLeds(100.0, 100.0, 100.0);
-        //centerDot->displayLeds(100.0, 100.0, 100.0);
+        centerDot->displayFlash(flashIntensity, FLASH_R, FLASH_G, FLASH_B);
         lock.unlock();
-        
-        vTaskDelay(20);   
+
+        vTaskDelay(20);
     }
-    
-} 
+
+}
 
 
 void mainLoop(void *context) 
