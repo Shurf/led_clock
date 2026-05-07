@@ -9,25 +9,27 @@
 // so highs glow bright, mids contribute orange-ish, bass barely tints blue.
 #define RED_TINT   1.0f
 #define GREEN_TINT 0.35f
-#define BLUE_TINT  0.15f
+#define BLUE_TINT  0.4f
 
 class LedManager
 {
 public:
     LedManager(int ledCountParam, int brightnessParam, int pin);
-    void displayLeds(float redPercentage, float greenPercentage, float bluePercentage);
-    // Paint every pixel with (r, g, b) scaled by `intensity` in [0, 1]. Used
-    // for the beat-driven flash on the center dot — soundLoop holds intensity
-    // at 1.0 on a beat, then decays it each frame.
-    void displayFlash(float intensity, int r, int g, int b);
-private:
 
+    // Spatial spectrum: each LED corresponds to a frequency band based on its
+    // index. Band group decides the color channel (0..4 highs → red, 5..7
+    // mids → green, 8..10 bass → blue), tinted by RED/GREEN/BLUE_TINT.
+    void displaySpectrum(const float* bands, int bandCount);
+
+    // Beat-driven flash: paint every pixel with (r, g, b) scaled by `intensity`
+    // in [0, 1]. Bypasses the tint pipeline so the flash punches through the
+    // warm palette as a clean white pop.
+    void displayFlash(float intensity, int r, int g, int b);
+
+private:
     int colorValue(float percentage);
-    void displaySingleColor(float redPercentage, float greenPercentage, float bluePercentage);
-    void displayGrowFromCenter(float redPercentage, float greenPercentage, float bluePercentage);
 
     int ledCount;
     int brightness;
     Adafruit_NeoPixel* rgbWS;
-    Color foregroundColor;
 };

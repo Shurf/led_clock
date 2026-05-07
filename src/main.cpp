@@ -93,11 +93,10 @@ void soundLoop(void *context)
     float flashIntensity = 0.0f;
     while(true)
     {
-        float redPercentage;
-        float greenPercentage;
-        float bluePercentage;
+        float bands[BAND_COUNT];
 
-        fft->calculatePercentages(redPercentage, greenPercentage, bluePercentage);
+        fft->calculatePercentages();
+        fft->getBands(bands);
 
         if (fft->beatDetected())
             flashIntensity = 1.0f;
@@ -105,7 +104,7 @@ void soundLoop(void *context)
             flashIntensity *= FLASH_DECAY;
 
         lock.lock();
-        middleCircle->displayLeds(redPercentage, greenPercentage, bluePercentage);
+        middleCircle->displaySpectrum(bands, BAND_COUNT);
         centerDot->displayFlash(flashIntensity, FLASH_R, FLASH_G, FLASH_B);
         lock.unlock();
 

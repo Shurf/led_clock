@@ -5,10 +5,6 @@ LedManager::LedManager(int ledCountParam, int brightnessParam, int pin)
     ledCount = ledCountParam;
     brightness = brightnessParam;
 
-    foregroundColor.red = 255;
-    foregroundColor.green = 255;
-    foregroundColor.blue = 0;
-
     rgbWS = new Adafruit_NeoPixel(ledCount, pin, NEO_GRB + NEO_KHZ800);
 
     rgbWS->begin();
@@ -23,73 +19,31 @@ int LedManager::colorValue(float percentage)
     return value;
 }
 
-void LedManager::displaySingleColor(float redPercentage, float greenPercentage, float bluePercentage)
+void LedManager::displaySpectrum(const float* bands, int bandCount)
 {
-    int r = colorValue(redPercentage * RED_TINT);
-    int g = colorValue(greenPercentage * GREEN_TINT);
-    int b = colorValue(bluePercentage * BLUE_TINT);
+    for (int i = 0; i < ledCount; i++)
+    {
+        int bandIdx = (i * bandCount) / ledCount;
+        if (bandIdx >= bandCount) bandIdx = bandCount - 1;
 
-    for (auto i = 0; i < ledCount; i++)
+        float intensity = bands[bandIdx];
+        int r = 0, g = 0, b = 0;
+        // Band groups match FFT.cpp's grouping: 0..4 highs, 5..7 mids, 8..10 bass.
+        if (bandIdx <= 4)
+            r = colorValue(intensity * RED_TINT);
+        else if (bandIdx <= 7)
+            g = colorValue(intensity * GREEN_TINT);
+        else
+            b = colorValue(intensity * BLUE_TINT);
+
         rgbWS->setPixelColor(i, r, g, b);
-    // Send each frame twice. The second show() waits for the WS2812 latch period
-    // automatically, so a single-bit data glitch in the first transmission is
-    // overwritten before the eye can register it. Mitigates the occasional
-    // stray-color pixel caused by 3.3 V data driving a 5 V strip.
+    }
+    // Send each frame twice. The second show() waits for the WS2812 latch
+    // period automatically, so a single-bit data glitch in the first
+    // transmission is overwritten before the eye can register it. Mitigates
+    // the occasional stray-color pixel caused by 3.3 V data driving a 5 V strip.
     rgbWS->show();
     rgbWS->show();
-}
-
-void LedManager::displayGrowFromCenter(float redPercentage, float greenPercentage, float bluePercentage)
-{
-    /*int numActiveLeds = int(NUM_LEDS * (redPercentage + greenPercentage + bluePercentage) / 3.0);
-    numActiveLeds *= LED_SCALING;
-    if (numActiveLeds > NUM_LEDS)
-        numActiveLeds = NUM_LEDS;
-
-    if (numActiveLeds == 0)
-        return;
-
-    auto numAlteredLeds = numActiveLeds / 3;
-
-    auto initialColor = CRGB(colorValue(redPercentage), colorValue(greenPercentage), colorValue(bluePercentage));
-    auto noneColor = CRGB(0, 0, 0);
-
-    auto redIncrement = (1.0 - redPercentage) / numAlteredLeds;
-    auto greenIncrement = (1.0 - greenPercentage) / numAlteredLeds;
-    auto blueIncrement = (1.0 - bluePercentage) / numAlteredLeds;
-
-    auto currentRedPercentage = redPercentage;
-    auto currentGreenPercentage = greenPercentage;
-    auto currentBluePercentage = bluePercentage;
-
-
-    for(int i = 0; i < numActiveLeds/2; i++)
-    {
-        if(i < (numActiveLeds - numAlteredLeds)/2)
-        {
-        leds[NUM_LEDS/2 + i] = initialColor;
-        leds[NUM_LEDS/2 - i - 1]= initialColor;
-        continue;
-        }
-
-        auto currentColor = CRGB(colorValue(currentRedPercentage), colorValue(currentGreenPercentage), colorValue(currentBluePercentage));
-
-        leds[NUM_LEDS/2 + i] = currentColor;
-        leds[NUM_LEDS/2 - i - 1]= currentColor;
-
-        currentRedPercentage += redIncrement;
-        currentGreenPercentage += greenIncrement;
-        currentBluePercentage += blueIncrement;
-
-    }
-
-    for(int i = numActiveLeds/2; i < NUM_LEDS/2; i++)
-    {
-        leds[NUM_LEDS/2 + i] = noneColor;
-        leds[NUM_LEDS/2 - i - 1]= noneColor;
-    }
-
-    FastLED.show(arguments.brightness);*/
 }
 
 void LedManager::displayFlash(float intensity, int r, int g, int b)
@@ -105,12 +59,4 @@ void LedManager::displayFlash(float intensity, int r, int g, int b)
         rgbWS->setPixelColor(i, sr, sg, sb);
     rgbWS->show();
     rgbWS->show();
-}
-
-void LedManager::displayLeds(float redPercentage, float greenPercentage, float bluePercentage)
-{
-    //if(arguments.mode == MODE_SINGLE_COLOR)
-        displaySingleColor(redPercentage, greenPercentage, bluePercentage);
-    /*if(arguments.mode == MODE_GROW_FROM_CENTER)
-        displayGrowFromCenter(redPercentage, greenPercentage, bluePercentage, arguments);*/
 }

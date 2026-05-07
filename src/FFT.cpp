@@ -65,117 +65,100 @@ void FFT::computeFFT()
 void FFT::calculateBands()
 {
     double max[TOTAL_BANDS];
-    double frequencyBandMaxDb[TOTAL_BANDS];
     int index = 0;
-    double hzPerSample = (1.0 * SAMPLING_FREQ) / SAMPLES; //
+    double hzPerSample = (1.0 * SAMPLING_FREQ) / SAMPLES;
     double hz = 0;
-    double sum = 0;
-    int count = 0;
 
     memset(max, 0, sizeof(max));
     memset(frequencyBandMaxDb, 0, sizeof(frequencyBandMaxDb));
 
     for (int i = 2; i < (SAMPLES / 2); i++)
     {
-        count++;
-        sum += vReal[i];
         if (vReal[i] > max[index])
-        {
             max[index] = vReal[i];
-        }
         if (hz > cutoffFrequencies[index])
         {
-            sum = 0.0;
-            count = 0;
             index++;
             max[index] = 0;
         }
         hz += hzPerSample;
     }
 
+    // Walk the raw bands in reverse so the highest-frequency band lands at
+    // index 0 of the output. Skips the bottom 3 raw bands (~2-9 Hz, sub-audible).
     int frequencyBandIndex = 0;
-
     for (int i = FREQUENCY_BANDS - 1; i >= 3; i--)
     {
         int frequencyMaxNormalizedDb = 0;
-        // calculate actual decibels
         if (max[i] > 0)
-        {
             frequencyMaxNormalizedDb = 20.0 * (log10(max[i]) - reference);
-        }
 
-        // adjust minimum and maximum levels
         if (frequencyMaxNormalizedDb < 0)
-        {
             frequencyMaxNormalizedDb = 0;
-        }
-
         if (frequencyMaxNormalizedDb >= MAX_FREQUENCY_VALUE)
-        {
             frequencyMaxNormalizedDb = MAX_FREQUENCY_VALUE;
-        }
+
         frequencyBandMaxDb[frequencyBandIndex] = frequencyMaxNormalizedDb;
         frequencyBandIndex++;
     }
-
-    redBandValue = 0;
-    greenBandValue = 0;
-    blueBandValue = 0;
-
-    for (int i = 0; i <= 4; i++) // 5 bands
-        redBandValue += frequencyBandMaxDb[i];
-
-    for (int i = 5; i <= 7; i++) // 3 bands
-        greenBandValue += frequencyBandMaxDb[i];
-
-    for (int i = 8; i <= 10; i++) // 3 bands
-        blueBandValue += frequencyBandMaxDb[i];
 }
 
-void FFT::calculatePercentages(float & redPercentage, float & greenPercentage, float & bluePercentage)
+void FFT::calculatePercentages()
 {
     takeSamples();
     computeFFT();
     calculateBands();
 
-    float rawRed = percentage(redBandValue, 5);
-    float rawGreen = percentage(greenBandValue, 3);
-    float rawBlue = percentage(blueBandValue, 3);
+    // Convert each band's clamped dB integer (in [0, MAX_FREQUENCY_VALUE]) to a
+    // raw [0, 1] percentage. Track the loudest band and the bass-band sum
+    // (indices 8..10) for AGC and beat detection respectively.
+    float rawBands[BAND_COUNT];
+    float instantPeak = 0.0f;
+    float bassSum = 0.0f;
+    for (int i = 0; i < BAND_COUNT; i++)
+    {
+        rawBands[i] = (float)frequencyBandMaxDb[i] / MAX_FREQUENCY_VALUE;
+        if (rawBands[i] > instantPeak) instantPeak = rawBands[i];
+        if (i >= 8) bassSum += rawBands[i];
+    }
+    float rawBass = bassSum / 3.0f;
 
-    // AGC: track the recent peak across all bands and normalize to it. Fast attack
-    // (jump up immediately) and slow decay so the visualization auto-calibrates
-    // to room volume but doesn't pump on every transient.
-    float instantPeak = max(max(rawRed, rawGreen), rawBlue);
+    // AGC: track the recent peak across all bands and normalize to it. Fast
+    // attack (jump up immediately) and slow decay so the visualization
+    // auto-calibrates to room volume without pumping on every transient.
     if (instantPeak > agcMax)
         agcMax = instantPeak;
     else
         agcMax = max(agcMax * AGC_DECAY, AGC_FLOOR);
 
     float gain = 1.0f / agcMax;
-    rawRed = min(rawRed * gain, 1.0f);
-    rawGreen = min(rawGreen * gain, 1.0f);
-    rawBlue = min(rawBlue * gain, 1.0f);
+    for (int i = 0; i < BAND_COUNT; i++)
+        rawBands[i] = min(rawBands[i] * gain, 1.0f);
+    rawBass = min(rawBass * gain, 1.0f);
 
-    // Beat detection on post-AGC bass, before the envelope smooths it. A kick
-    // shows up as a sudden spike above the slow running average; the refractory
-    // counter prevents the same kick from triggering twice while it decays.
+    // Beat detection on the post-AGC bass average, before the envelope smooths
+    // anything. A kick shows up as a sudden spike above the slow running
+    // average; the refractory counter prevents the same kick from
+    // double-counting while it decays.
     beatThisFrame = false;
     if (beatRefractoryLeft > 0)
         beatRefractoryLeft--;
-    else if (rawBlue > BEAT_MIN_LEVEL && rawBlue > bassRunningAvg * BEAT_THRESHOLD)
+    else if (rawBass > BEAT_MIN_LEVEL && rawBass > bassRunningAvg * BEAT_THRESHOLD)
     {
         beatThisFrame = true;
         beatRefractoryLeft = BEAT_REFRACTORY_FRAMES;
     }
-    bassRunningAvg = bassRunningAvg * BEAT_AVG_DECAY + rawBlue * (1.0f - BEAT_AVG_DECAY);
+    bassRunningAvg = bassRunningAvg * BEAT_AVG_DECAY + rawBass * (1.0f - BEAT_AVG_DECAY);
 
-    // Envelope follower per band: peak attack, exponential decay. Keeps transients
-    // visible and stops the ring from twitching back to dark between drum hits.
-    smoothedRed = max(rawRed, smoothedRed * ENVELOPE_DECAY);
-    smoothedGreen = max(rawGreen, smoothedGreen * ENVELOPE_DECAY);
-    smoothedBlue = max(rawBlue, smoothedBlue * ENVELOPE_DECAY);
+    // Per-band envelope follower: peak attack, exponential decay. Keeps
+    // transients visible and stops the ring from twitching back to dark
+    // between drum hits.
+    for (int i = 0; i < BAND_COUNT; i++)
+        smoothedBands[i] = max(rawBands[i], smoothedBands[i] * ENVELOPE_DECAY);
+}
 
-    redPercentage = smoothedRed;
-    greenPercentage = smoothedGreen;
-    bluePercentage = smoothedBlue;
+void FFT::getBands(float out[BAND_COUNT]) const
+{
+    for (int i = 0; i < BAND_COUNT; i++)
+        out[i] = smoothedBands[i];
 }

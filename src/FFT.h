@@ -13,6 +13,9 @@
 #define AMPLITUDE 100 // sensitivity
 #define FREQUENCY_BANDS 14
 #define TOTAL_BANDS 20
+// Number of valid bands after `calculateBands` skips the lowest 3 sub-audible
+// raw bands and reverses the order. Indices 0..4 are highs, 5..7 mids, 8..10 bass.
+#define BAND_COUNT 11
 
 // Per-frame decay for the visual envelope follower. Larger = slower decay
 // (more "languid"), smaller = punchier. Frame rate is ~20-25 fps so 0.85
@@ -41,7 +44,8 @@
 class FFT {
 public:
     FFT();
-    void calculatePercentages(float & redPercentage, float & greenPercentage, float & bluePercentage);
+    void calculatePercentages();
+    void getBands(float out[BAND_COUNT]) const;
     bool beatDetected() const { return beatThisFrame; }
 private:
 
@@ -59,13 +63,11 @@ private:
     ArduinoFFT<double>* fft;
     float reference;
 
-    int redBandValue = 0;
-    int greenBandValue = 0;
-    int blueBandValue = 0;
+    // Per-band normalized dB values in [0, MAX_FREQUENCY_VALUE], filled by calculateBands.
+    int frequencyBandMaxDb[BAND_COUNT] = {0};
 
-    float smoothedRed = 0.0f;
-    float smoothedGreen = 0.0f;
-    float smoothedBlue = 0.0f;
+    // Per-band post-AGC, post-envelope-followed values in [0, 1]. Read by getBands.
+    float smoothedBands[BAND_COUNT] = {0};
     float agcMax = AGC_FLOOR;
 
     float bassRunningAvg = 0.0f;
