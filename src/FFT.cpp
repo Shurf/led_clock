@@ -122,10 +122,6 @@ void FFT::calculateBands()
     greenBandValue = 0;
     blueBandValue = 0;
 
-    maxRed = 0;
-    maxGreen = 0;
-    maxBlue = 0;
-
     for (int i = 0; i <= 4; i++) // 5 bands
         redBandValue += frequencyBandMaxDb[i];
 
@@ -138,11 +134,35 @@ void FFT::calculateBands()
 
 void FFT::calculatePercentages(float & redPercentage, float & greenPercentage, float & bluePercentage)
 {
-    takeSamples();   
+    takeSamples();
     computeFFT();
     calculateBands();
 
-    redPercentage = percentage(redBandValue, 5);
-    greenPercentage = percentage(greenBandValue, 3);
-    bluePercentage = percentage(blueBandValue, 3);
+    float rawRed = percentage(redBandValue, 5);
+    float rawGreen = percentage(greenBandValue, 3);
+    float rawBlue = percentage(blueBandValue, 3);
+
+    // AGC: track the recent peak across all bands and normalize to it. Fast attack
+    // (jump up immediately) and slow decay so the visualization auto-calibrates
+    // to room volume but doesn't pump on every transient.
+    float instantPeak = max(max(rawRed, rawGreen), rawBlue);
+    if (instantPeak > agcMax)
+        agcMax = instantPeak;
+    else
+        agcMax = max(agcMax * AGC_DECAY, AGC_FLOOR);
+
+    float gain = 1.0f / agcMax;
+    rawRed = min(rawRed * gain, 1.0f);
+    rawGreen = min(rawGreen * gain, 1.0f);
+    rawBlue = min(rawBlue * gain, 1.0f);
+
+    // Envelope follower per band: peak attack, exponential decay. Keeps transients
+    // visible and stops the ring from twitching back to dark between drum hits.
+    smoothedRed = max(rawRed, smoothedRed * ENVELOPE_DECAY);
+    smoothedGreen = max(rawGreen, smoothedGreen * ENVELOPE_DECAY);
+    smoothedBlue = max(rawBlue, smoothedBlue * ENVELOPE_DECAY);
+
+    redPercentage = smoothedRed;
+    greenPercentage = smoothedGreen;
+    bluePercentage = smoothedBlue;
 }

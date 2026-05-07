@@ -24,10 +24,18 @@ int LedManager::colorValue(float percentage)
 }
 
 void LedManager::displaySingleColor(float redPercentage, float greenPercentage, float bluePercentage)
-{    
+{
+    int r = colorValue(redPercentage * RED_TINT);
+    int g = colorValue(greenPercentage * GREEN_TINT);
+    int b = colorValue(bluePercentage * BLUE_TINT);
+
     for (auto i = 0; i < ledCount; i++)
-        rgbWS->setPixelColor(i, foregroundColor.red, foregroundColor.green, foregroundColor.blue);
-    rgbWS->setBrightness(max((int)(brightness * (redPercentage + greenPercentage + bluePercentage) / 3.0), 8));
+        rgbWS->setPixelColor(i, r, g, b);
+    // Send each frame twice. The second show() waits for the WS2812 latch period
+    // automatically, so a single-bit data glitch in the first transmission is
+    // overwritten before the eye can register it. Mitigates the occasional
+    // stray-color pixel caused by 3.3 V data driving a 5 V strip.
+    rgbWS->show();
     rgbWS->show();
 }
 

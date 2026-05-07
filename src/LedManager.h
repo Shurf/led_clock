@@ -4,6 +4,13 @@
 #include <Adafruit_NeoPixel.h>
 #include "common.h"
 
+// Per-channel multipliers applied after the AGC + envelope follower, before the
+// [0, 255] clamp. <1 suppresses, >1 boosts. Defaults bias the palette toward red
+// so highs glow bright, mids contribute orange-ish, bass barely tints blue.
+#define RED_TINT   1.0f
+#define GREEN_TINT 0.35f
+#define BLUE_TINT  0.15f
+
 class LedManager
 {
 public:
