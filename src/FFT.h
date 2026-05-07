@@ -8,7 +8,7 @@
 // arbitraty value, tune as needed
 #define MAX_FREQUENCY_VALUE 30
 
-#define SAMPLES 1024 // power of 2
+#define SAMPLES 512 // power of 2
 #define SAMPLING_FREQ 40000 // 12 kHz Fmax = sampleF /2
 #define AMPLITUDE 100 // sensitivity
 #define FREQUENCY_BANDS 14

@@ -2,7 +2,6 @@
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
-#include <WiFiClientSecure.h>
 #include <ArduinoOTA.h>
 
 #ifndef OTA_PASSWORD
@@ -10,7 +9,6 @@
 #endif
 
 #include "HttpControl.h"
-#include "NeoPixelLed.h"
 #include "ClockDialHour.h"
 #include "ClockDialMinute.h"
 #include "BacklightLed.h"
@@ -44,19 +42,8 @@
 #define NEOPIXEL_LED_TOP 21
 
 std::mutex lock;
-//#define NEOPIXEL_BRIGHTNESS 8
-// #define NEOPIXEL_BRIGHTNESS 32
 
-
-
-// NeoPixelLed * neoPixelLed = new NeoPixelLed(357, 255, NEOPIXEL_LED_PIN, false); // cross 
-// NeoPixelLed * neoPixelLed = new NeoPixelLed(298, 255, NEOPIXEL_LED_PIN, true); // ankh 
-// NeoPixelLed * neoPixelLed = new NeoPixelLed(24, 8, NEOPIXEL_LED_PIN, false); // circle
-// NeoPixelLed * neoPixelLed = new NeoPixelLed(20, 255, NEOPIXEL_LED_PIN, false); // rabbit
-
-//NeoPixelLed * neoPixelLedCenterDot = new NeoPixelLed(1, NEOPIXEL_BRIGHTNESS, NEOPIXEL_LED_PIN_CENTER_DOT, false);
 ClockDialHour * clockHour = new ClockDialHour(NEOPIXEL_BRIGHTNESS, NEOPIXEL_LED_PIN_INNER_CIRCLE);
-// NeoPixelLed * neoPixelLedMiddleCircle = new NeoPixelLed(24, NEOPIXEL_BRIGHTNESS, NEOPIXEL_LED_PIN_MIDDLE_CIRCLE, false);
 ClockDialMinute * clockMinute = new ClockDialMinute(NEOPIXEL_BRIGHTNESS, NEOPIXEL_LED_PIN_OUTER_CIRCLE);
 
 BacklightLed * rightBacklightLed = new BacklightLed(16, NEOPIXEL_BRIGHTNESS, NEOPIXEL_LED_RIGHT_COLUMN);
@@ -66,7 +53,6 @@ BacklightLed * topBacklightLed = new BacklightLed(9, NEOPIXEL_BRIGHTNESS, NEOPIX
 
 #define INTERVAL_MILLIS 1000
 
-WiFiClientSecure client;
 unsigned long lastMillis;
 HttpControl* httpControl;
 
@@ -209,7 +195,7 @@ void setup() {
   setenv("TZ","CET-1CEST,M3.5.0,M10.5.0/3",1);
   tzset();
 
-  xTaskCreatePinnedToCore(mainLoop, "mainLoop", 4096*16, NULL, 1, NULL, 1);
+  xTaskCreatePinnedToCore(mainLoop, "mainLoop", 4096, NULL, 1, NULL, 1);
   xTaskCreatePinnedToCore(soundLoop, "soundLoop", 4096, NULL, 1, NULL, 0);
   xTaskCreatePinnedToCore(otaLoop, "otaLoop", 4096, NULL, 1, NULL, 0);
 
